@@ -7,7 +7,53 @@
 
 require 'net/http'
 require 'uri'
+require 'clipboard'
 
+# Use the CodeWizard with the cURL command you've copied using Developer
+# tools on Alexa's SPA page (within the web browser).
+#
+# note: to find the correct url to convert, try clickin on pause or play to
+#       invoke an AJAX request
+
+class CodeWizard
+
+  def initialize(s='')
+
+    return 'no curl command found' unless s =~ /curl/
+
+    cookie, serialno, type = parse(s)
+
+@s =<<EOF
+require 'alexa_remotectl'
+
+cookie = '#{cookie}'
+device = {serialno: '#{serialno}', type: '#{type}'}
+alexa = AlexaRemoteCtl.new(cookie: cookie, device: device)
+alexa.pause
+#alexa.play
+EOF
+
+  end
+
+  def to_s()
+    Clipboard.copy @s
+    puts 'copied to clipboard'
+
+    @s
+  end
+
+  private
+
+  def parse(s)
+
+    serialno = s[/deviceSerialNumber=(\w+)/,1]
+    type = s[/deviceType=(\w+)/,1]
+    cookie = s[/Cookie: ([^']+)/,1]
+
+    [cookie, serialno, type]
+
+  end
+end
 
 class AlexaRemoteCtl
 
