@@ -8,6 +8,7 @@
 require 'net/http'
 require 'uri'
 require 'clipboard'
+require 'json'
 
 # Use the CodeWizard with the cURL command you've copied using Developer
 # tools on Alexa's SPA page (within the web browser).
@@ -63,33 +64,96 @@ class AlexaRemoteCtl
 
   end
 
+  def info()
+    device_player()[:playerInfo]
+  end
+
+  def mute?()
+    info()[:volume][:muted]
+  end
+
+  alias muted? mute?
+
+  # skip to the next music track
+  def next
+    pp_cmd('Next')
+  end
+
   def pause
-    device_cmd('Pause')
+    pp_cmd('Pause')
   end
 
   def play
-    device_cmd('Play')
+    pp_cmd('Play')
+  end
+
+  # Artist name
+  #
+  def text1()
+    info()[:infoText][:subText1]
+  end
+
+  # music station
+  #
+  def text2()
+    info()[:infoText][:subText2]
+  end
+
+  # music track title
+  #
+  def title()
+    info()[:infoText][:title]
+  end
+
+  def vol()
+    info()[:volume][:volume]
+  end
+
+  def vol=(n)
+
+    return unless n.between? 0, 40
+
+    body = '{"type":"VolumeLevelCommand","volumeLevel":' + n.to_s \
+             + ',"contentFocusClientId":null}'
+    device_cmd(body)
   end
 
   private
 
-  def device_cmd(cmd)
+  # play, pause, or next
+  #
+  def pp_cmd(s)
+    body = '{"type":"' + s + 'Command","contentFocusClientId":null}'
+    device_cmd body
+  end
+
+  def device_cmd(body)
 
     serialno = @device[:serialno]
     type = @device[:type]
 
     url = "https://#{@domain}/api/np/command?deviceSerialNumber=#{serialno}&deviceType=#{type}"
-    uri = URI.parse(url)
-    request = Net::HTTP::Post.new(uri)
-    request.body = '{"type":"' + cmd + 'Command","contentFocusClientId":null}'
-    request.content_type = "application/x-www-form-urlencoded; charset=UTF-8"
+    post_command url, body
+
+  end
+
+  def device_player()
+    serialno = @device[:serialno]
+    type = @device[:type]
+
+    url = "https://#{@domain}/api/np/player?deviceSerialNumber=#{serialno}&deviceType=#{type}"
+    r = post_request url
+    JSON.parse(r.body, symbolize_names: true)
+  end
+
+  def make_response(uri, request)
 
     request["Accept"] = "application/json, text/javascript, */*; q=0.01"
     request["Accept-Language"] = "en-GB,en-US;q=0.9,en;q=0.8"
     request["Connection"] = "keep-alive"
     request["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
     request["Cookie"] = @cookie
-    request["Origin"] = "https://" + @domain
+
     request["Referer"] = "https://#{@domain}/spa/index.html"
     request["Sec-Fetch-Dest"] = "empty"
     request["Sec-Fetch-Mode"] = "cors"
@@ -110,8 +174,30 @@ class AlexaRemoteCtl
       http.request(request)
     end
 
+  end
+
+  def post_command(url, body='')
+    uri = URI.parse(url)
+    request = Net::HTTP::Post.new(uri)
+    request.body = body
+    request.content_type = "application/x-www-form-urlencoded; charset=UTF-8"
+    request["Origin"] = "https://" + @domain
+
+    response = make_response(uri, request)
+
+    # response.code
+    # response.body
+  end
+
+  def post_request(url)
+
+    uri = URI.parse(url)
+    request = Net::HTTP::Get.new(uri)
+    response = make_response(uri, request)
+
     # response.code
     # response.body
 
   end
+
 end

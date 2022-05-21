@@ -1,7 +1,8 @@
 Gem::Specification.new do |s|
   s.name = 'alexa_remotectl'
-  s.version = '0.2.0'
-  s.summary = 'Experimental project to play or pause Alexa\'s music player using the SPA API'
+  s.version = '0.3.0'
+  s.summary = 'Experimental project to play or pause Alexa\'s ' +
+      'music player using the SPA API'
   s.authors = ['James Robertson']
   s.files = Dir["lib/alexa_remotectl.rb"]
   s.add_runtime_dependency('clipboard', '~> 1.3', '>=1.3.6')
