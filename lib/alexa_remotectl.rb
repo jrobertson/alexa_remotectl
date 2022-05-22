@@ -87,6 +87,10 @@ class AlexaRemoteCtl
     pp_cmd('Play')
   end
 
+  def playing?()
+    info()[:state] == 'PLAYING'
+  end
+
   # Artist name
   #
   def text1()
@@ -198,6 +202,69 @@ class AlexaRemoteCtl
     # response.code
     # response.body
 
+  end
+
+end
+
+class AlexaDevices
+
+  # devices = [[{*serialno*, *type*}, label], ...]
+  # note: label can be any identifier you choose e.g. kitchen
+  #
+  def initialize(devicesx=[], devices: devicesx,
+                 domain: 'alexa.amazon.co.uk', cookie: '')
+
+    @devices, @domain, @cookie = devices, domain, cookie
+
+  end
+
+  def playing()
+
+    @devices.map do |device, label|
+      alexa = AlexaRemoteCtl.new(cookie: @cookie, device: device)
+      alexa.playing? ? [alexa, label] : nil
+    end.compact
+
+  end
+
+  def pause(id=nil)
+
+    a = playing()
+
+    if id then
+
+      alexa, _ = a.find {|_, label| label.to_sym == id.to_sym}
+      alexa.pause
+
+    else
+
+      a.each do |alexa, label|
+        puts 'Pausing @' + label.inspect
+        alexa.pause
+      end
+
+    end
+  end
+
+  def play(id=nil)
+
+    a = @devices
+
+    if id then
+
+      device, _ = a.find {|_, label| label.to_sym == id.to_sym}
+      alexa = AlexaRemoteCtl.new(cookie: @cookie, device: device)
+      alexa.play
+
+    else
+
+      a.each do |device, label|
+        puts 'Pausing @' + label.inspect
+        alexa = AlexaRemoteCtl.new(cookie: @cookie, device: device)
+        alexa.play
+      end
+
+    end
   end
 
 end
