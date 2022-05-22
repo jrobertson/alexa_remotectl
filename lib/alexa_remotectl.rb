@@ -22,14 +22,15 @@ class CodeWizard
 
     return 'no curl command found' unless s =~ /curl/
 
-    cookie, serialno, type = parse(s)
+    cookie, csrf, serialno, type = parse(s)
 
 @s =<<EOF
 require 'alexa_remotectl'
 
 cookie = '#{cookie}'
+csrf = '#{csrf}'
 device = {serialno: '#{serialno}', type: '#{type}'}
-alexa = AlexaRemoteCtl.new(cookie: cookie, device: device)
+alexa = AlexaRemoteCtl.new(cookie: cookie, csrf: csrf, device: device)
 alexa.pause
 #alexa.play
 EOF
@@ -50,18 +51,21 @@ EOF
     serialno = s[/deviceSerialNumber=(\w+)/,1]
     type = s[/deviceType=(\w+)/,1]
     cookie = s[/Cookie: ([^']+)/,1]
+    csrf = s[/csrf: ([^']+)/,1]
 
-    [cookie, serialno, type]
+    [cookie, csrf, serialno, type]
 
   end
 end
 
 class AlexaRemoteCtl
 
-  def initialize(domain: 'alexa.amazon.co.uk', device: {}, cookie: '',
-                 customerid: '')
+  # note: Added the Cross-site request forgery (crsf) variable
+  #
+  def initialize(domain: 'alexa.amazon.co.uk', device: {}, cookie: '', customerid: '', csrf: '')
 
     @domain, @device, @cookie, @customerid = domain, device, cookie, customerid
+    @csrf = csrf
 
   end
 
@@ -226,7 +230,7 @@ class AlexaRemoteCtl
         "AppleWebKit/537.36 (KHTML, like Gecko) " +
         "Chrome/101.0.4951.64 Safari/537.36"
     request["X-Requested-With"] = "XMLHttpRequest"
-    request["csrf"] = "-990908140"
+    request["csrf"] = @csrf
     request["dnt"] = "1"
     request["sec-ch-ua"] = "\" Not A;Brand\";v=\"99\", \"Chromium\";v=\"101\""
     request["sec-ch-ua-mobile"] = "?0"
@@ -288,10 +292,11 @@ class AlexaDevices
   # note: label can be any identifier you choose e.g. kitchen
   #
   def initialize(devicesx=[], devices: devicesx,
-                 domain: 'alexa.amazon.co.uk', cookie: '', customerid: '')
+                 domain: 'alexa.amazon.co.uk', cookie: '', customerid: '',
+                 csrf: '')
 
     @devices, @domain, @cookie = devices, domain, cookie
-    @customerid = customerid
+    @customerid, @csrf = customerid, csrf
 
   end
 
@@ -351,7 +356,7 @@ class AlexaDevices
   def get_alexa(device)
 
     AlexaRemoteCtl.new(cookie: @cookie, device: device,
-                       customerid: @customerid)
+                       customerid: @customerid, csrf: @csrf)
   end
 
 end
