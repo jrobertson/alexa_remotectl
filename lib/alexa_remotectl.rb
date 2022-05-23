@@ -62,7 +62,8 @@ class AlexaRemoteCtl
 
   # note: Added the Cross-site request forgery (crsf) variable
   #
-  def initialize(domain: 'alexa.amazon.co.uk', device: {}, cookie: '', customerid: '', csrf: '')
+  def initialize(domain: 'alexa.amazon.co.uk', device: {}, cookie: '',
+      customerid: '', csrf: '')
 
     @domain, @device, @cookie, @customerid = domain, device, cookie, customerid
     @csrf = csrf
@@ -76,6 +77,12 @@ class AlexaRemoteCtl
   def list_ebooks()
     get_json '/api/ebooks/library', "mediaOwnerCustomerId=#{@customerid}" +
         "&nextToken=&size=50"
+  end
+
+  # list historical queue (hq)
+  #
+  def list_hq()
+    get_json '/api/media/historical-queue', "size=50&offset=-1"
   end
 
   def mute?()
@@ -115,8 +122,11 @@ class AlexaRemoteCtl
 
   end
 
-  def play_hq(id)
-    device_phq(id)
+  # play historical queue
+  # note: You can find the queueid from an entry in the list_hq() result
+  #
+  def play_hq(queueid)
+    device_phq(queueid)
   end
 
   def playing?()
@@ -293,63 +303,46 @@ class AlexaDevices
   #
   def initialize(devicesx=[], devices: devicesx,
                  domain: 'alexa.amazon.co.uk', cookie: '', customerid: '',
-                 csrf: '')
+                 csrf: '', debug: false)
 
     @devices, @domain, @cookie = devices, domain, cookie
-    @customerid, @csrf = customerid, csrf
+    @customerid, @csrf, @debug = customerid, csrf, debug
 
   end
+
+  def info(id=nil)    invoke(:info, id)            end
+  def list_ebooks(id) invoke(:list_ebooks, id)     end
+  def list_hq(id=nil) invoke(:list_hq, id)         end
+  def mute?(id=nil)   invoke2(:mute?, id)          end
+  def next(id)        invoke2(:next, id)           end
 
   def playing()
 
-    @devices.map do |device, label|
+    devices = @devices.map do |device, label|
+
+      puts 'label: ' + label.inspect if @debug
+      puts 'device: ' + device.inspect if @debug
+
       alexa = get_alexa device
       alexa.playing? ? [alexa, label] : nil
+
     end.compact
 
+    puts 'devices: ' + devices.inspect if @debug
+    return devices
+
   end
 
-  def pause(id=nil)
-
-    a = playing()
-
-    if id then
-
-      alexa, _ = a.find {|_, label| label.to_sym == id.to_sym}
-      alexa.pause
-
-    else
-
-      a.each do |alexa, label|
-        puts 'Pausing @' + label.inspect
-        alexa.pause
-      end
-
-    end
-  end
-
-  def play(id=nil)
-
-    a = @devices
-
-    if id then
-
-      device, _ = a.find {|_, label| label.to_sym == id.to_sym}
-      alexa = get_alexa device
-      alexa.play
-
-    else
-
-      a.each do |device, label|
-
-        puts 'Pausing @' + label.inspect
-        alexa = get_alexa device
-        alexa.play
-
-      end
-
-    end
-  end
+  def pause(id=nil)      invoke2(:pause, id)          end
+  def play(id)           invoke(:play, id)            end
+  def play_ebook(id)     invoke(:list_hq, id)         end
+  def play_hq(id,qid)    invoke(:play_hq, id, qid)    end
+  def playing?(id=nil)   invoke(:playing, id)         end
+  def text1(id=nil)      invoke2(:text1, id)          end
+  def text2(id=nil)      invoke2(:text2, id)          end
+  def title(id=nil)      invoke2(:title, id)          end
+  def vol(id=nil)        invoke(:vol, id)             end
+  def vol=(id=nil)       invoke(:vol=, id)            end
 
   private
 
@@ -357,6 +350,37 @@ class AlexaDevices
 
     AlexaRemoteCtl.new(cookie: @cookie, device: device,
                        customerid: @customerid, csrf: @csrf)
+  end
+
+  def apply_cmd(a, cmd, id, args)
+
+    if id then
+
+      device, _ = a.find {|_, label| label.to_sym == id.to_sym}
+      alexa = get_alexa device
+      alexa.method(cmd).call(*args)
+
+    else
+
+      a.map do |device, label|
+
+        puts cmd.to_s + ' @' + label.inspect
+        alexa = get_alexa device
+        alexa.method(cmd).call(*args)
+
+      end
+
+    end
+  end
+
+  def invoke(cmd, id, *args)
+    apply_cmd(@devices, cmd, id, args)
+  end
+
+  # apply command to an Alexa device which is currently playing
+  #
+  def invoke2(cmd, id, *args)
+    apply_cmd(playing(), cmd, id, args)
   end
 
 end
