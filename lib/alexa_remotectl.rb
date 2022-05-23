@@ -13,7 +13,7 @@ require 'json'
 # Use the CodeWizard with the cURL command you've copied using Developer
 # tools on Alexa's SPA page (within the web browser).
 #
-# note: to find the correct url to convert, try clickin on pause or play to
+# note: to find the correct url to convert, try clicking on pause or play to
 #       invoke an AJAX request
 
 class CodeWizard
@@ -70,13 +70,29 @@ class AlexaRemoteCtl
 
   end
 
+  # Some audio streams can't be paused through the SPA API. Playing a
+  # historical queue, and then pausing it, is the best next option.
+  #
+  def force_pause()
+
+    r = list_hq()
+    queueid = r[:media][0][:queueId]
+
+    play_hq queueid
+    sleep 1
+
+    pause()
+
+  end
+
   def info()
     device_player()[:playerInfo]
   end
 
   def list_ebooks()
-    get_json '/api/ebooks/library', "mediaOwnerCustomerId=#{@customerid}" +
+    r = get_json '/api/ebooks/library', "mediaOwnerCustomerId=#{@customerid}" +
         "&nextToken=&size=50"
+    r[:metadataList]
   end
 
   # list historical queue (hq)
@@ -104,7 +120,13 @@ class AlexaRemoteCtl
     pp_cmd('Play')
   end
 
-  def play_ebook(id)
+  def play_ebook(obj)
+
+    id = if obj.is_a? Integer then
+      list_ebook()[obj][:asin]
+    else
+      obj
+    end
 
     serialno = @device[:serialno]
     type = @device[:type]
@@ -125,7 +147,15 @@ class AlexaRemoteCtl
   # play historical queue
   # note: You can find the queueid from an entry in the list_hq() result
   #
-  def play_hq(queueid)
+  def play_hq(obj)
+
+    queueid = if obj.is_a? Integer then
+      r = list_hq()
+      r[:media][obj][:queueId]
+    else
+      obj
+    end
+
     device_phq(queueid)
   end
 
@@ -163,6 +193,8 @@ class AlexaRemoteCtl
              + ',"contentFocusClientId":null}'
     device_cmd(body)
   end
+
+  alias setvol vol=
 
   private
 
@@ -310,6 +342,7 @@ class AlexaDevices
 
   end
 
+  def force_pause(id) invoke(:force_pause, id)     end
   def info(id=nil)    invoke(:info, id)            end
   def list_ebooks(id) invoke(:list_ebooks, id)     end
   def list_hq(id=nil) invoke(:list_hq, id)         end

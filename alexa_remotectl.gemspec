@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'alexa_remotectl'
-  s.version = '0.4.3'
+  s.version = '0.4.4'
   s.summary = 'Experimental project to play or pause Alexa\'s ' +
       'music player using the SPA API'
   s.authors = ['James Robertson']
