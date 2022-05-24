@@ -370,12 +370,12 @@ class AlexaDevices
   def play(id)           invoke(:play, id)            end
   def play_ebook(id)     invoke(:list_hq, id)         end
   def play_hq(id,qid)    invoke(:play_hq, id, qid)    end
-  def playing?(id=nil)   invoke(:playing, id)         end
+  def playing?(id=nil)   invoke(:playing?, id)        end
   def text1(id=nil)      invoke2(:text1, id)          end
   def text2(id=nil)      invoke2(:text2, id)          end
   def title(id=nil)      invoke2(:title, id)          end
   def vol(id=nil)        invoke(:vol, id)             end
-  def vol=(id=nil)       invoke(:vol=, id)            end
+  def setvol(id=nil, level)  invoke(:setvol, id, level) end
 
   private
 
