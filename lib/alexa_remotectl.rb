@@ -406,6 +406,25 @@ class AlexaDevices
     end
   end
 
+  def apply_cmd2(a, cmd, id, args)
+
+    if id then
+
+      alexa, _ = a.find {|_, label| label.to_sym == id.to_sym}
+      alexa.method(cmd).call(*args)
+
+    else
+
+      a.map do |alexa, label|
+
+        puts cmd.to_s + ' @' + label.inspect
+        alexa.method(cmd).call(*args)
+
+      end
+
+    end
+  end
+
   def invoke(cmd, id, *args)
     apply_cmd(@devices, cmd, id, args)
   end
@@ -413,7 +432,7 @@ class AlexaDevices
   # apply command to an Alexa device which is currently playing
   #
   def invoke2(cmd, id, *args)
-    apply_cmd(playing(), cmd, id, args)
+    apply_cmd2(playing(), cmd, id, args)
   end
 
 end
